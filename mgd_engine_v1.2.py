@@ -1,263 +1,219 @@
+
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-MGD (Modèle Génératif Dialectique) v1.2
-Code source complet, typé et documenté
+MGD (Modèle Génératif Dialectique) v1.1
+Code source complet et exécutable
 Auteur: Kenny Lefevre
 Date: 2025-11-09
 Licence: CC-BY-NC-4.0
 
-Ce modèle formalise la dialectique (Thèse / Antithèse / Synthèse)
-comme un système génératif vectoriel dans ℕ³, soumis à un axiome
-d’équilibre : S ≥ T + A.
-
-Opérateurs :
-  - Hybridation : combinaison additive de deux états
-  - Résolution : correction vers l’équilibre
-  - Ancrage : condition d’enchâssement récursif (A₁ = T₂)
-
-Utilisation :
+Utilisation:
     python mgd.py
 """
 
 from itertools import product
-from typing import Tuple, Set, List, Dict, Any, Optional
-
-
-Vector = Tuple[int, int, int]
-
 
 class MGDMoteur:
     """
-    Moteur du Modèle Génératif Dialectique (MGD).
-    Représente les états dialectiques comme des vecteurs (T, A, S).
+    Moteur du Modèle Génératif Dialectique.
+    Implémente les trois opérateurs: Hybridation, Résolution, Récursion.
     """
-
-    def __init__(self) -> None:
-        """Initialise les trois états fondamentaux."""
-        self.M_THESE: Vector = (1, 0, 0)
-        self.M_ANTITHESE: Vector = (0, 1, 0)
-        self.M_SYNTHESE: Vector = (0, 0, 1)
-
-    def verifier_axiome(self, t: int, a: int, s: int) -> bool:
+    
+    def __init__(self):
+        """Initialise le moteur avec les trois états de base."""
+        self.M_THESE = (1, 0, 0)
+        self.M_ANTITHESE = (0, 1, 0)
+        self.M_SYNTHESE = (0, 0, 1)
+    
+    def verifier_axiome(self, t, a, s):
         """
-        Vérifie l’axiome d’équilibre du modèle :
-            S ≥ T + A
-
-        Un état est dit « équilibré » s’il satisfait cet axiome.
+        Vérifie si une proposition est équilibrée.
+        Axiome: S ≥ T + A
         """
         return s >= (t + a)
-
-    def est_equilibre(self, v: Vector) -> bool:
-        """Alias plus parlant pour `verifier_axiome`."""
-        return self.verifier_axiome(*v)
-
-    def hybridation(self, v1: Vector, v2: Vector) -> Vector:
+    
+    def hybridation(self, v1, v2):
         """
-        Opérateur d’hybridation : combinaison additive des composantes.
-        Produit un état de « tension » qui peut être instable.
+        Opérateur d'hybridation: mélange deux vecteurs dialectiques.
+        Résultat: addition vectorielle composante par composante.
         """
         return tuple(x + y for x, y in zip(v1, v2))
-
-    def resolution(self, v: Vector) -> Vector:
+    
+    def resolution(self, v):
         """
-        Opérateur de résolution : stabilise un état en garantissant
-        l’axiome d’équilibre.
-
-        Formule : (T, A, max(S, T + A))
-        L’opérateur est idempotent : Σ(Σ(v)) = Σ(v)
+        Opérateur de résolution: transforme un état instable en équilibré.
+        Formule: Σ(v) = (t, a, max(s, t+a))
         """
         t, a, s = v
-        s_equilibre = t + a
-        if s >= s_equilibre:
-            return v  # déjà équilibré
-        return (t, a, s_equilibre)
-
-    def generer_hybridations(self, max_iterations: int = 5, verbose: bool = False) -> Tuple[List[int], Set[Vector]]:
+        s_min = t + a
+        return (t, a, max(s, s_min))
+    
+    def generer_hybridations(self, max_iterations=5, verbose=False):
         """
-        Génère des états dialectiques par hybridation itérative
-        des états connus, suivie de résolution.
-
-        Retourne :
-            - historique du nombre de nouveaux états par itération,
-            - ensemble de tous les états générés (équilibrés).
+        Génère une infinité d'états par hybridation répétée.
         """
-        # États de base (déjà équilibrés)
-        etats: Set[Vector] = {self.M_THESE, self.M_ANTITHESE, self.M_SYNTHESE}
-        historique: List[int] = []
-
-        if verbose:
-            print(f"  États initiaux : {len(etats)}")
-
+        all_states = {self.M_THESE, self.M_ANTITHESE, self.M_SYNTHESE}
+        history = []
+        
         for iteration in range(max_iterations):
-            nouveaux: Set[Vector] = set()
-            liste_etats = list(etats)
-
-            # Génère toutes les paires non orientées (incluant (x,x))
-            for i, s1 in enumerate(liste_etats):
-                for s2 in liste_etats[i:]:
+            new_states = set()
+            state_list = list(all_states)
+            
+            for i, s1 in enumerate(state_list):
+                for s2 in state_list[i:]:
                     hybrid = self.hybridation(s1, s2)
-                    stable = self.resolution(hybrid)
-                    if stable not in etats:
-                        nouveaux.add(stable)
-
-            if not nouveaux:
-                if verbose:
-                    print(f"  → Stabilisation atteinte à l’itération {iteration + 1}")
-                break
-
-            etats.update(nouveaux)
-            historique.append(len(nouveaux))
-
+                    resolved = self.resolution(hybrid)
+                    
+                    if resolved not in all_states:
+                        new_states.add(resolved)
+            
+            all_states.update(new_states)
+            history.append(len(new_states))
+            
             if verbose:
-                print(f"  Itération {iteration + 1}: "
-                      f"{len(nouveaux)} nouveaux états | Total: {len(etats)}")
-
-        return historique, etats
-
-    def generer_cube_27(self) -> List[Vector]:
+                print(f"  Itération {iteration+1}: "
+                      f"{len(new_states)} nouveaux états | "
+                      f"Total: {len(all_states)}")
+            
+            if len(new_states) == 0:
+                if verbose:
+                    print(f"  → Génération stabilisée")
+                break
+        
+        return history, all_states
+    
+    def generer_cube_27(self):
         """
-        Génère l’espace théorique C27 = {0,1,2}³.
-        Cet espace inclut des états non équilibrés et sert de cadre
-        pour explorer des configurations potentielles (ex. poétiques,
-        récursives, ou transitoires).
+        Génère la structure C27: cube 3×3×3.
+        C27 = produit cartésien {0,1,2} × {0,1,2} × {0,1,2}
         """
         return list(product(range(3), repeat=3))
-
-    def ancrage_valide(self, v1: Vector, v2: Vector) -> bool:
+    
+    def ancrage_valide(self, v1, v2):
         """
-        Règle d’ancrage pour l’enchâssement récursif :
-            L’antithèse du premier état (v1[1]) doit coïncider
-            avec la thèse du second (v2[0]).
-
-        Interprétation : la tension du premier devient la base du second.
+        Vérifie la règle d'ancrage pour enchâssement récursif.
+        Règle: ℛ(v1, v2) valide ssi v1[1] == v2[0]
         """
         return v1[1] == v2[0]
-
-    def analyser_cube_27(self) -> Dict[str, Any]:
+    
+    def analyser_cube_27(self):
         """
-        Analyse statistique du cube C27 :
-            - nombre total de points,
-            - nombre de paires valides selon la règle d’ancrage,
-            - ratio en pourcentage.
+        Analyse la structure du cube C27 et les ancrages.
         """
         cube = self.generer_cube_27()
-        total_paires = len(cube) ** 2
-        ancrages_valides = sum(
-            1 for p1 in cube for p2 in cube if self.ancrage_valide(p1, p2)
-        )
-        ratio = (ancrages_valides / total_paires) * 100
-
+        
+        valid_anchors = 0
+        total_pairs = len(cube) ** 2
+        
+        for p1 in cube:
+            for p2 in cube:
+                if self.ancrage_valide(p1, p2):
+                    valid_anchors += 1
+        
+        ratio = (valid_anchors / total_pairs) * 100
+        
         return {
-            "nombre_points": len(cube),
-            "total_paires": total_paires,
-            "ancrages_valides": ancrages_valides,
-            "ratio_percentage": round(ratio, 2)
+            'nombre_points': len(cube),
+            'total_paires': total_pairs,
+            'ancrages_valides': valid_anchors,
+            'ratio_percentage': ratio
         }
-
-    def generer_triade_poetique(
-        self,
-        v1: Vector,
-        v2: Vector,
-        concepts: Optional[Dict[Vector, str]] = None
-    ) -> Dict[str, Any]:
+    
+    def generer_triade_poetique(self, v1, v2, concepts=None):
         """
-        Génère une triade poétique à partir de deux concepts.
-
-        Étapes :
-            1. Hybridation → tension
-            2. Résolution → synthèse équilibrée
+        Génère une triade poétique via hybridation + résolution.
         """
         hybrid = self.hybridation(v1, v2)
-        synthese = self.resolution(hybrid)
-
-        label = lambda v: concepts.get(v, str(v)) if concepts else str(v)
-
-        return {
-            "concept_1": label(v1),
-            "concept_2": label(v2),
-            "tension": hybrid,
-            "synthese": synthese,
-            "equilibre": self.est_equilibre(synthese)
+        resolved = self.resolution(hybrid)
+        
+        result = {
+            'concept_1': concepts.get(v1, str(v1)) if concepts else str(v1),
+            'concept_2': concepts.get(v2, str(v2)) if concepts else str(v2),
+            'tension': hybrid,
+            'synthese': resolved,
+            'equilibre': self.verifier_axiome(*resolved)
         }
+        
+        return result
 
 
 # ============================================================
-# DÉMONSTRATION ET TESTS
+# TESTS ET DÉMONSTRATION
 # ============================================================
 
 if __name__ == "__main__":
-    print("=" * 70)
-    print("MGD (Modèle Génératif Dialectique) — Démonstration complète")
-    print("Auteur: Kenny Lefevre • Licence: CC-BY-NC-4.0")
-    print("=" * 70)
-
+    print("="*70)
+    print("MGD (Modèle Génératif Dialectique) - Exécution complète")
+    print("Auteur: Kenny Lefevre")
+    print("="*70)
+    
     moteur = MGDMoteur()
-
-    # ——————————————————————————————————
-    # TEST 1 : Hybridation et résolution
-    # ——————————————————————————————————
-    print("\n[TEST 1] Hybridation et résolution dialectique")
-    print("-" * 70)
-
-    these = moteur.M_THESE
-    antithese = moteur.M_ANTITHESE
-
-    print(f"Thèse      : {these}")
-    print(f"Antithèse  : {antithese}")
-
-    tension = moteur.hybridation(these, antithese)
-    print(f"\nTension    : {these} ⊕ {antithese} = {tension}")
-    print(f"Équilibré ? {moteur.est_equilibre(tension)}")
-
-    synthese = moteur.resolution(tension)
-    print(f"Synthèse   : Σ({tension}) = {synthese}")
-    print(f"Équilibré ? {moteur.est_equilibre(synthese)} ✓")
-
-    # ——————————————————————————————————
-    # TEST 2 : Génération itérative
-    # ——————————————————————————————————
-    print("\n\n[TEST 2] Génération dialectique (5 itérations max)")
-    print("-" * 70)
-
-    historique, etats = moteur.generer_hybridations(max_iterations=5, verbose=True)
-
-    print(f"\n→ Résumé de la génération :")
-    for i, nb in enumerate(historique, 1):
-        print(f"  Itération {i}: {nb} nouveaux états")
-    print(f"  Total d’états uniques : {len(etats)}")
-
-    # ——————————————————————————————————
-    # TEST 3 : Structure C27
-    # ——————————————————————————————————
-    print("\n\n[TEST 3] Analyse de l’espace théorique C27")
-    print("-" * 70)
-
+    
+    # TEST 1: Hybridation et Résolution
+    print("\n[TEST 1] Hybridation simple")
+    print("-"*70)
+    
+    v1 = moteur.M_THESE
+    v2 = moteur.M_ANTITHESE
+    
+    print(f"Thèse:      {v1}")
+    print(f"Antithèse:  {v2}")
+    
+    hybrid = moteur.hybridation(v1, v2)
+    print(f"\nHybridation (tension):")
+    print(f"  {v1} ⊕ {v2} = {hybrid}")
+    print(f"  Équilibré? {moteur.verifier_axiome(*hybrid)}")
+    
+    resolved = moteur.resolution(hybrid)
+    print(f"\nRésolution (équilibre):")
+    print(f"  Σ({hybrid}) = {resolved}")
+    print(f"  Équilibré? {moteur.verifier_axiome(*resolved)} ✓")
+    
+    # TEST 2: Génération d'infini
+    print("\n\n[TEST 2] Génération d'infini par hybridation (5 itérations)")
+    print("-"*70)
+    
+    history, all_states = moteur.generer_hybridations(max_iterations=5, verbose=True)
+    
+    print(f"\nRésumé:")
+    for i, count in enumerate(history, 1):
+        print(f"  Itération {i}: {count} nouveaux états")
+    print(f"  Total: {len(all_states)} états uniques")
+    
+    # TEST 3: Cube C27
+    print("\n\n[TEST 3] Structure C27 et Ancrage")
+    print("-"*70)
+    
     stats = moteur.analyser_cube_27()
-    print(f"  Points dans C27          : {stats['nombre_points']}")
-    print(f"  Paires d’ancrage valides : {stats['ancrages_valides']} / {stats['total_paires']}")
-    print(f"  Ratio d’ancrage          : {stats['ratio_percentage']} %")
-
-    # ——————————————————————————————————
-    # TEST 4 : Triade poétique
-    # ——————————————————————————————————
+    print(f"\nCube 3×3×3:")
+    print(f"  Points: {stats['nombre_points']}")
+    print(f"  Paires d'ancrage valides: {stats['ancrages_valides']}/{stats['total_paires']}")
+    print(f"  Ratio: {stats['ratio_percentage']:.2f}%")
+    
+    # TEST 4: Application poétique
     print("\n\n[TEST 4] Triade poétique")
-    print("-" * 70)
-
+    print("-"*70)
+    
     concepts = {
         (1, 0, 0): "Interrogation",
         (0, 1, 0): "Négation",
         (0, 0, 1): "Affirmation"
     }
-
-    triade = moteur.generer_triade_poetique(these, antithese, concepts)
-
-    print(f"  Concept 1    : {triade['concept_1']}")
-    print(f"  Concept 2    : {triade['concept_2']}")
-    print(f"  État tension : {triade['tension']}")
-    print(f"  Synthèse     : {triade['synthese']}")
-    print(f"  Équilibré ?  : {triade['equilibre']} ✓")
-
-    print("\n" + "=" * 70)
-    print("✓ Démonstration terminée avec succès.")
-    print("=" * 70)
+    
+    triade = moteur.generer_triade_poetique(
+        moteur.M_THESE,
+        moteur.M_ANTITHESE,
+        concepts
+    )
+    
+    print(f"\nConcept 1: {triade['concept_1']}")
+    print(f"Concept 2: {triade['concept_2']}")
+    print(f"État de tension: {triade['tension']}")
+    print(f"État de synthèse: {triade['synthese']}")
+    print(f"Équilibré? {triade['equilibre']} ✓")
+    
+    print("\n" + "="*70)
+    print("✓ Tous les tests réussis!")
+    print("="*70)
